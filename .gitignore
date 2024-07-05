@@ -8,6 +8,9 @@ node_modules
 env
 .env
 /.env
+/tmp
+/.tmp
+tmp
 
 # testing
 /coverage
