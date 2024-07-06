@@ -1,5 +1,4 @@
 require("dotenv").config()
-require("./cleanup")
 
 const express = require("express")
 const app = express()
@@ -18,7 +17,7 @@ app.use(bodyParser.json())
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 app.use(cors())
-app.use(fileUpload({ useTempFiles: true }))
+app.use(fileUpload())
 
 app.use("/api", router)
 

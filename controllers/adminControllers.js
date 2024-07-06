@@ -187,12 +187,14 @@ const createCircular = async (req, res, next) => {
   try {
     const { circular } = req.files
     const { name, by } = req.body
-    cloudinary.uploader.upload(
-      circular.tempFilePath,
+
+    const buffer = circular.data
+
+    const uploadStream = cloudinary.uploader.upload_stream(
       { folder: "circulars" },
       async (err, result) => {
         if (err) {
-          res.status(500).json({ message: "Error uploading file" })
+          return res.status(500).json({ message: "Error uploading file" })
         } else {
           const newCircular = new CircularData({
             by,
@@ -203,13 +205,15 @@ const createCircular = async (req, res, next) => {
             },
           })
           await newCircular.save()
-          res.status(201).json({
-            message: "File uploaded successfully !",
+          return res.status(201).json({
+            message: "File uploaded successfully!",
             data: newCircular,
           })
         }
       }
     )
+
+    uploadStream.end(buffer)
   } catch (error) {
     res.status(500).json({ message: "Failed to save circular", error })
   }
