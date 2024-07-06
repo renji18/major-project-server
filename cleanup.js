@@ -8,7 +8,9 @@ const ageThreshold = 60 * 60 * 1000
 
 const cleanTmpFolder = async () => {
   try {
+    await fs.ensureDir(tmpFolderPath)
     const files = await fs.readdir(tmpFolderPath)
+    if (files.length === 0) return
     const now = Date.now()
     const deletePromises = files.map(async (file) => {
       const filePath = path.join(tmpFolderPath, file)
