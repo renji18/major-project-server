@@ -7,11 +7,6 @@ const circularSchema = mongoose.Schema(
       required: [true, "Please Provide A Name"],
       trim: true,
     },
-    by: {
-      type: String,
-      required: [true, "Please Provide A Name"],
-      trim: true,
-    },
     image: {
       avatar: {
         type: String,

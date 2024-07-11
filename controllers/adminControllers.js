@@ -186,7 +186,7 @@ const sendMailToStudents = async (req, res, next) => {
 const createCircular = async (req, res, next) => {
   try {
     const { circular } = req.files
-    const { name, by } = req.body
+    const { name } = req.body
 
     const buffer = circular.data
 
@@ -197,7 +197,6 @@ const createCircular = async (req, res, next) => {
           return res.status(500).json({ message: "Error uploading file" })
         } else {
           const newCircular = new CircularData({
-            by,
             name,
             image: {
               avatar: result.secure_url,
