@@ -10,16 +10,16 @@ const circularSchema = mongoose.Schema(
     image: {
       avatar: {
         type: String,
-        required: [true, "Please Provide A Name"],
+        required: true,
       },
       cloudinary_id: {
         type: String,
-        required: [true, "Please Provide A Name"],
+        required: true,
       },
     },
-    active: {
-      type: Boolean,
-      default: true,
+    for: {
+      type: String,
+      default: "all",
     },
   },
   { timestamps: true }

@@ -4,6 +4,15 @@ const xlsx = require("xlsx")
 const nodemailer = require("nodemailer")
 const cloudinary = require("cloudinary").v2
 
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  auth: {
+    user: process.env.SMTP_MAIL,
+    pass: process.env.SMTP_PASSWORD,
+  },
+})
+
 // overwrite the previous students data and replace with the new one
 const addStudents = async (req, res, next) => {
   try {
@@ -139,14 +148,6 @@ const sendMailToStudents = async (req, res, next) => {
   const { students } = req.body
   const { feesType } = req.params
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      auth: {
-        user: process.env.SMTP_MAIL,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    })
     const mailOptions = {
       from: `${process.env.SMTP_NAME} ${process.env.SMTP_MAIL}`,
       subject: `${
@@ -186,7 +187,7 @@ const sendMailToStudents = async (req, res, next) => {
 const createCircular = async (req, res, next) => {
   try {
     const { circular } = req.files
-    const { name } = req.body
+    const { name, _for } = req.body
 
     const buffer = circular.data
 
@@ -202,8 +203,49 @@ const createCircular = async (req, res, next) => {
               avatar: result.secure_url,
               cloudinary_id: result.public_id,
             },
+            for: _for,
           })
           await newCircular.save()
+
+          let students = null
+
+          if (_for === "all") students = await StudentData.find()
+          else {
+            const regex = new RegExp(`^${_for}\\D`)
+            students = await StudentData.find({
+              division: { $regex: regex },
+            })
+          }
+
+          const mailOptions = {
+            from: `${process.env.SMTP_NAME} ${process.env.SMTP_MAIL}`,
+            subject: `New Circular for Semester ${_for} students!!!`,
+          }
+
+          try {
+            students?.map(async (s) => {
+              mailOptions.to = s?.email
+              mailOptions.html = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <body>
+                <div>
+                  <p>Dear ${s?.name},</p>
+                  <p>A new circular <strong><a href=${process.env.CLIENT_URL}/circulars target="_blank">(${name})</a></strong> has just been uploaded.</p>
+                  <br/>
+                  <p>Thank You,</p>
+                  <p>Aadarsh University</p>
+                </div>
+                </body>
+                </html>
+              `
+              await transporter.sendMail(mailOptions)
+            })
+          } catch (error) {
+            return res
+              .status(500)
+              .json({ message: "Failed to send email", error })
+          }
           return res.status(201).json({
             message: "File uploaded successfully!",
             data: newCircular,
