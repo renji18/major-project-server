@@ -2,6 +2,7 @@ const StudentData = require("../models/studentSchema")
 const CircularData = require("../models/circularSchema")
 const xlsx = require("xlsx")
 const nodemailer = require("nodemailer")
+const SyllabusData = require("../models/syllabusSchema")
 const cloudinary = require("cloudinary").v2
 
 const transporter = nodemailer.createTransport({
@@ -199,7 +200,7 @@ const createCircular = async (req, res, next) => {
         } else {
           const newCircular = new CircularData({
             name,
-            image: {
+            file: {
               avatar: result.secure_url,
               cloudinary_id: result.public_id,
             },
@@ -302,18 +303,137 @@ const editCircular = async (req, res, next) => {
 const deleteCircular = async (req, res, next) => {
   try {
     const circular = await CircularData.findById(req.params._id)
-    await cloudinary.uploader.destroy(
-      circular.image.cloudinary_id,
-      function (result) {
-        console.log(result, "log from erore")
-      }
-    )
+    await cloudinary.uploader.destroy(circular.file.cloudinary_id)
     await circular.deleteOne({ _id: req.params._id })
     res.status(201).json({
       message: "success",
     })
   } catch (error) {
     res.status(500).json({ message: "Failed to delete circular", error })
+  }
+}
+
+// create syllabus
+const createSyllabus = async (req, res, next) => {
+  try {
+    const { syllabus } = req.files
+    const { name, _for } = req.body
+
+    const buffer = syllabus.data
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: "syllabus" },
+      async (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: "Error uploading file" })
+        } else {
+          const newSyllabus = new SyllabusData({
+            name,
+            file: {
+              avatar: result.secure_url,
+              cloudinary_id: result.public_id,
+            },
+            for: _for,
+          })
+          await newSyllabus.save()
+
+          const regex = new RegExp(`^${_for}\\D`)
+          const students = await StudentData.find({
+            division: { $regex: regex },
+          })
+
+          const mailOptions = {
+            from: `${process.env.SMTP_NAME} ${process.env.SMTP_MAIL}`,
+            subject: `New Syllabus of ${name} for Semester ${_for} students!!!`,
+          }
+
+          try {
+            students?.map(async (s) => {
+              mailOptions.to = s?.email
+              mailOptions.html = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <body>
+                <div>
+                  <p>Dear ${s?.name},</p>
+                  <p>A new syllabus for subject <strong><a href=${process.env.CLIENT_URL}/syllabus target="_blank">(${name})</a></strong> has just been uploaded.</p>
+                  <br/>
+                  <p>Thank You,</p>
+                  <p>Aadarsh University</p>
+                </div>
+                </body>
+                </html>
+              `
+              await transporter.sendMail(mailOptions)
+            })
+          } catch (error) {
+            return res
+              .status(500)
+              .json({ message: "Failed to send email", error })
+          }
+          return res.status(201).json({
+            message: "File uploaded successfully!",
+            data: newSyllabus,
+          })
+        }
+      }
+    )
+
+    uploadStream.end(buffer)
+  } catch (error) {
+    res.status(500).json({ message: "Failed to save syllabus", error })
+  }
+}
+
+// // read single syllabus
+const singleSyllabus = async (req, res, next) => {
+  try {
+    const syllabus = await SyllabusData.findById(req.params._id)
+    res.status(201).json({
+      message: "success",
+      data: syllabus,
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get syllabus", error })
+  }
+}
+
+// // read all syllabus
+const allSyllabus = async (req, res, next) => {
+  try {
+    const syllabus = await SyllabusData.find()
+    res.status(201).json({
+      message: "success",
+      data: syllabus,
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get syllabus", error })
+  }
+}
+
+// // edit circular
+const editSyllabus = async (req, res, next) => {
+  try {
+    await SyllabusData.findByIdAndUpdate(req.params._id, req.body)
+    res.status(201).json({
+      message: "success",
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to edit syllabus", error })
+  }
+}
+
+// // delete circular
+const deleteSyllabus = async (req, res, next) => {
+  try {
+    const syllabus = await SyllabusData.findById(req.params._id)
+    await cloudinary.uploader.destroy(syllabus.file.cloudinary_id)
+    await syllabus.deleteOne({ _id: req.params._id })
+    res.status(201).json({
+      message: "success",
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete syllabus", error })
   }
 }
 
@@ -328,4 +448,9 @@ module.exports = {
   singleCircular,
   deleteCircular,
   editCircular,
+  createSyllabus,
+  allSyllabus,
+  singleSyllabus,
+  editSyllabus,
+  deleteSyllabus,
 }

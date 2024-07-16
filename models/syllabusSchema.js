@@ -1,10 +1,14 @@
 const mongoose = require("mongoose")
 
-const circularSchema = mongoose.Schema(
+const syllabusSchema = mongoose.Schema(
   {
+    for: {
+      type: Number,
+      required: [true, "Please Provide Semester Number"],
+    },
     name: {
       type: String,
-      required: [true, "Please Provide A Name"],
+      required: [true, "Please Provide Subject Name"],
       trim: true,
     },
     file: {
@@ -17,14 +21,10 @@ const circularSchema = mongoose.Schema(
         required: true,
       },
     },
-    for: {
-      type: String,
-      default: "all",
-    },
   },
   { timestamps: true }
 )
 
-const CircularData = new mongoose.model("circulardata", circularSchema)
+const SyllabusData = new mongoose.model("syllabusdata", syllabusSchema)
 
-module.exports = CircularData
+module.exports = SyllabusData
