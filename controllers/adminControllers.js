@@ -247,15 +247,14 @@ const createCircular = async (req, res, next) => {
               .status(500)
               .json({ message: "Failed to send email", error })
           }
-          return res.status(201).json({
-            message: "File uploaded successfully!",
-            data: newCircular,
-          })
         }
       }
     )
 
     uploadStream.end(buffer)
+    return res.status(201).json({
+      message: "File uploaded successfully!",
+    })
   } catch (error) {
     res.status(500).json({ message: "Failed to save circular", error })
   }
@@ -336,50 +335,14 @@ const createSyllabus = async (req, res, next) => {
             for: _for,
           })
           await newSyllabus.save()
-
-          const regex = new RegExp(`^${_for}\\D`)
-          const students = await StudentData.find({
-            division: { $regex: regex },
-          })
-
-          const mailOptions = {
-            from: `${process.env.SMTP_NAME} ${process.env.SMTP_MAIL}`,
-            subject: `New Syllabus of ${name} for Semester ${_for} students!!!`,
-          }
-
-          try {
-            students?.map(async (s) => {
-              mailOptions.to = s?.email
-              mailOptions.html = `
-                <!DOCTYPE html>
-                <html lang="en">
-                <body>
-                <div>
-                  <p>Dear ${s?.name},</p>
-                  <p>A new syllabus for subject <strong><a href=${process.env.CLIENT_URL}/syllabus target="_blank">(${name})</a></strong> has just been uploaded.</p>
-                  <br/>
-                  <p>Thank You,</p>
-                  <p>Aadarsh University</p>
-                </div>
-                </body>
-                </html>
-              `
-              await transporter.sendMail(mailOptions)
-            })
-          } catch (error) {
-            return res
-              .status(500)
-              .json({ message: "Failed to send email", error })
-          }
-          return res.status(201).json({
-            message: "File uploaded successfully!",
-            data: newSyllabus,
-          })
         }
       }
     )
 
     uploadStream.end(buffer)
+    return res.status(201).json({
+      message: "File uploaded successfully!",
+    })
   } catch (error) {
     res.status(500).json({ message: "Failed to save syllabus", error })
   }
@@ -411,7 +374,7 @@ const allSyllabus = async (req, res, next) => {
   }
 }
 
-// // edit circular
+// // edit syllabus
 const editSyllabus = async (req, res, next) => {
   try {
     await SyllabusData.findByIdAndUpdate(req.params._id, req.body)
@@ -423,7 +386,7 @@ const editSyllabus = async (req, res, next) => {
   }
 }
 
-// // delete circular
+// // delete syllabus
 const deleteSyllabus = async (req, res, next) => {
   try {
     const syllabus = await SyllabusData.findById(req.params._id)
