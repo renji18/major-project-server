@@ -232,7 +232,7 @@ const createCircular = async (req, res, next) => {
                 <body>
                 <div>
                   <p>Dear ${s?.name},</p>
-                  <p>A new circular <strong><a href=${process.env.CLIENT_URL}/circulars target="_blank">(${name})</a></strong> has just been uploaded.</p>
+                  <p>A new circular <strong><a href=${process.env.CLIENT_URL}/${result?.public_id} target="_blank">(${name})</a></strong> has just been uploaded.</p>
                   <br/>
                   <p>Thank You,</p>
                   <p>Aadarsh University</p>
