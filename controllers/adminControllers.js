@@ -3,6 +3,8 @@ const CircularData = require("../models/circularSchema")
 const xlsx = require("xlsx")
 const nodemailer = require("nodemailer")
 const SyllabusData = require("../models/syllabusSchema")
+const ExamData = require("../models/examSchema")
+const AchievementData = require("../models/achievementsSchema")
 const cloudinary = require("cloudinary").v2
 
 const transporter = nodemailer.createTransport({
@@ -69,59 +71,6 @@ const addStudents = async (req, res, next) => {
   }
 }
 
-// appends the new students data after the previous uploaded data
-const appendNewStudents = async (req, res, next) => {
-  try {
-    if (!req.files.file) {
-      return res.status(400).json({ message: "No file uploaded" })
-    }
-
-    const workbook = xlsx.read(req.files.file.data, { type: "buffer" })
-    let data = []
-
-    const sheets = workbook.SheetNames
-    for (let i = 0; i < sheets.length; i++) {
-      const temp = xlsx.utils.sheet_to_json(
-        workbook.Sheets[workbook.SheetNames[i]]
-      )
-      data.push(...temp)
-    }
-
-    data = data?.map((d) => {
-      return {
-        name: d?.Name,
-        enrollment: d["Enrollment Number"],
-        contact: d?.Contact,
-        email: d?.Email,
-        division: d?.Division,
-        fees: {
-          tuition: {
-            total: d["Total Tuition Fees"],
-            paid: d["Paid Tuition Fees"],
-            pending: d["Pending Tuition Fees"],
-          },
-          hostel: {
-            total: d["Total Hostel Fees"],
-            paid: d["Paid Hostel Fees"],
-            pending: d["Pending Hostel Fees"],
-          },
-          bus: {
-            total: d["Total Bus Fees"],
-            paid: d["Paid Bus Fees"],
-            pending: d["Pending Bus Fees"],
-          },
-        },
-      }
-    })
-
-    await StudentData.create(data)
-
-    res.status(201).json({ message: "Success" })
-  } catch (error) {
-    res.status(500).json({ message: "Failed appending students", error })
-  }
-}
-
 // get all students data
 const getAllStudentsData = async (req, res, next) => {
   try {
@@ -129,18 +78,6 @@ const getAllStudentsData = async (req, res, next) => {
     res.status(201).json({ message: "Success", students })
   } catch (error) {
     res.status(500).json({ message: "Failed getting all students", error })
-  }
-}
-
-// get single student data
-const getSingleStudentData = async (req, res, next) => {
-  try {
-    const student = await StudentData.findOne({
-      enrollment: req.params.enrollmentId,
-    })
-    res.status(201).json({ message: "Success", student })
-  } catch (error) {
-    res.status(500).json({ message: "Failed getting single students", error })
   }
 }
 
@@ -260,19 +197,6 @@ const createCircular = async (req, res, next) => {
   }
 }
 
-// read single circular
-const singleCircular = async (req, res, next) => {
-  try {
-    const circular = await CircularData.findById(req.params._id)
-    res.status(201).json({
-      message: "success",
-      data: circular,
-    })
-  } catch (error) {
-    res.status(500).json({ message: "Failed to save circular", error })
-  }
-}
-
 // read all circulars
 const allCirculars = async (req, res, next) => {
   try {
@@ -283,18 +207,6 @@ const allCirculars = async (req, res, next) => {
     })
   } catch (error) {
     res.status(500).json({ message: "Failed to get circulars", error })
-  }
-}
-
-// edit circular
-const editCircular = async (req, res, next) => {
-  try {
-    await CircularData.findByIdAndUpdate(req.params._id, req.body)
-    res.status(201).json({
-      message: "success",
-    })
-  } catch (error) {
-    res.status(500).json({ message: "Failed to edit circular", error })
   }
 }
 
@@ -316,7 +228,7 @@ const deleteCircular = async (req, res, next) => {
 const createSyllabus = async (req, res, next) => {
   try {
     const { syllabus } = req.files
-    const { name, _for } = req.body
+    const { semester, department, subject } = req.body
 
     const buffer = syllabus.data
 
@@ -327,12 +239,13 @@ const createSyllabus = async (req, res, next) => {
           return res.status(500).json({ message: "Error uploading file" })
         } else {
           const newSyllabus = new SyllabusData({
-            name,
+            subject,
             file: {
               avatar: result.secure_url,
               cloudinary_id: result.public_id,
             },
-            for: _for,
+            semester,
+            department,
           })
           await newSyllabus.save()
         }
@@ -348,20 +261,7 @@ const createSyllabus = async (req, res, next) => {
   }
 }
 
-// // read single syllabus
-const singleSyllabus = async (req, res, next) => {
-  try {
-    const syllabus = await SyllabusData.findById(req.params._id)
-    res.status(201).json({
-      message: "success",
-      data: syllabus,
-    })
-  } catch (error) {
-    res.status(500).json({ message: "Failed to get syllabus", error })
-  }
-}
-
-// // read all syllabus
+// read all syllabus
 const allSyllabus = async (req, res, next) => {
   try {
     const syllabus = await SyllabusData.find()
@@ -374,19 +274,7 @@ const allSyllabus = async (req, res, next) => {
   }
 }
 
-// // edit syllabus
-const editSyllabus = async (req, res, next) => {
-  try {
-    await SyllabusData.findByIdAndUpdate(req.params._id, req.body)
-    res.status(201).json({
-      message: "success",
-    })
-  } catch (error) {
-    res.status(500).json({ message: "Failed to edit syllabus", error })
-  }
-}
-
-// // delete syllabus
+// delete syllabus
 const deleteSyllabus = async (req, res, next) => {
   try {
     const syllabus = await SyllabusData.findById(req.params._id)
@@ -400,20 +288,144 @@ const deleteSyllabus = async (req, res, next) => {
   }
 }
 
+// create syllabus
+const createExam = async (req, res, next) => {
+  try {
+    const { exam_file } = req.files
+    const { semester, department, exam_type } = req.body
+
+    const buffer = exam_file.data
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: "exams" },
+      async (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: "Error uploading file" })
+        } else {
+          const newExam = new ExamData({
+            file: {
+              avatar: result.secure_url,
+              cloudinary_id: result.public_id,
+              exam_type,
+            },
+            semester,
+            department,
+          })
+          await newExam.save()
+        }
+      }
+    )
+
+    uploadStream.end(buffer)
+    return res.status(201).json({
+      message: "File uploaded successfully!",
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to save exam", error })
+  }
+}
+
+// read all syllabus
+const allExams = async (req, res, next) => {
+  try {
+    const exam = await ExamData.find()
+    res.status(201).json({
+      message: "success",
+      data: exam,
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get exam", error })
+  }
+}
+
+// delete syllabus
+const deleteExam = async (req, res, next) => {
+  try {
+    const exam = await ExamData.findById(req.params._id)
+    await cloudinary.uploader.destroy(exam.file.cloudinary_id)
+    await exam.deleteOne({ _id: req.params._id })
+    res.status(201).json({
+      message: "success",
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete exam", error })
+  }
+}
+
+// create achievement
+const createAchievement = async (req, res, next) => {
+  try {
+    const { achievement } = req.files
+
+    const buffer = achievement.data
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { folder: "achievements" },
+      async (err, result) => {
+        if (err) {
+          return res.status(500).json({ message: "Error uploading file" })
+        } else {
+          const newAchievement = new AchievementData({
+            file: {
+              avatar: result.secure_url,
+              cloudinary_id: result.public_id,
+            },
+          })
+          await newAchievement.save()
+        }
+      }
+    )
+
+    uploadStream.end(buffer)
+    return res.status(201).json({
+      message: "File uploaded successfully!",
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to save achievement", error })
+  }
+}
+
+// read all achievements
+const allAchievements = async (req, res, next) => {
+  try {
+    const achievements = await AchievementData.find()
+    res.status(201).json({
+      message: "success",
+      data: achievements,
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to get achievements", error })
+  }
+}
+
+// delete achievement
+const deleteAchievement = async (req, res, next) => {
+  try {
+    const achievement = await AchievementData.findById(req.params._id)
+    await cloudinary.uploader.destroy(achievement.file.cloudinary_id)
+    await achievement.deleteOne({ _id: req.params._id })
+    res.status(201).json({
+      message: "success",
+    })
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete achievement", error })
+  }
+}
+
 module.exports = {
   addStudents,
-  appendNewStudents,
   getAllStudentsData,
-  getSingleStudentData,
   sendMailToStudents,
   createCircular,
   allCirculars,
-  singleCircular,
   deleteCircular,
-  editCircular,
   createSyllabus,
   allSyllabus,
-  singleSyllabus,
-  editSyllabus,
   deleteSyllabus,
+  createExam,
+  allExams,
+  deleteExam,
+  createAchievement,
+  allAchievements,
+  deleteAchievement,
 }

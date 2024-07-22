@@ -1,6 +1,6 @@
 const mongoose = require("mongoose")
 
-const syllabusSchema = mongoose.Schema(
+const examSchema = mongoose.Schema(
   {
     semester: {
       type: Number,
@@ -9,11 +9,6 @@ const syllabusSchema = mongoose.Schema(
     department: {
       type: String,
       required: [true, "Please Provide Department Name"],
-    },
-    subject: {
-      type: String,
-      required: [true, "Please Provide Subject Name"],
-      trim: true,
     },
     file: {
       avatar: {
@@ -24,11 +19,15 @@ const syllabusSchema = mongoose.Schema(
         type: String,
         required: true,
       },
+      exam_type: {
+        type: String,
+        required: [true, "Please Provide Exam Type"],
+      },
     },
   },
   { timestamps: true }
 )
 
-const SyllabusData = new mongoose.model("syllabusdata", syllabusSchema)
+const ExamData = new mongoose.model("examdata", examSchema)
 
-module.exports = SyllabusData
+module.exports = ExamData
